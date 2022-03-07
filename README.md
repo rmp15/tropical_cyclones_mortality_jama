@@ -1,6 +1,6 @@
 # Association of Tropical Cyclones With County-Level Mortality in the US
 
-Parks, R. M., et al. "Association of Tropical Cyclones With County-Level Mortality in the US." JAMA. 2022;327(10):1-11. doi:10.1001/jama.2022.1682
+Parks R. M., Benavides J., Anderson G. B., et al. "Association of Tropical Cyclones With County-Level Mortality in the US." JAMA. 2022;327(10):1-11. doi:10.1001/jama.2022.1682
 
 Code used for analysis for Parks et al. JAMA 2022
 

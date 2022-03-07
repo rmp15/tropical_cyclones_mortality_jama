@@ -11,5 +11,5 @@ Art by Amy Wolfe
 model/model.R
 
 #### Figures from main analyses in paper
-figures/Figure1.Rmd
+figures/Figure1.Rmd\
 figures/Figures2-4.Rmd

@@ -10,6 +10,11 @@ Art by Amy Wolfe
 #### Model for main analyses in paper
 model/model.R
 
-#### Figures from main analyses in paper
-figures/Figure1.Rmd\
+#### Figure 1. Counts of Tropical Cyclone Exposure by US County, 1988-2018
+figures/Figure1.Rmd
+
+#### Figure 2. Percentage change in death rates per one day increase in monthly tropical cyclone or hurricane-only exposure by cause of death, and lag time.
+#### Figure 3. Percentage change in death rates per one day increase in monthly tropical cyclone exposure by cause of death, age group (0-64 years, 65+ years), and lag time.
+#### Figure 4. Percentage change in death rates per one day increase in monthly tropical cyclone exposure by cause of death, social vulnerability tertiles, and lag time.
+
 figures/Figures2-4.Rmd

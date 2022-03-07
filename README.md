@@ -4,7 +4,7 @@ Parks, R. M., et al. "Association of Tropical Cyclones With County-Level Mortali
 
 Code used for analysis and plotting of Figures for Parks et al. JAMA 2022
 
-![image](https://github.com/rmp15/tropical_cyclones_mortality_jama/blob/main/banner/banner.tif)
+![image](https://github.com/rmp15/tropical_cyclones_mortality_jama/blob/main/banner/banner.jpg)
 Art by Amy Wolfe
 
 #### Model for main analyses in paper

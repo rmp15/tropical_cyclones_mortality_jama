@@ -9,3 +9,7 @@ Art by Amy Wolfe
 
 #### Model for main analyses in paper
 model/model.R
+
+#### Figures from main analyses in paper
+figures/Figure1.Rmd
+figures/Figures2-4.Rmd

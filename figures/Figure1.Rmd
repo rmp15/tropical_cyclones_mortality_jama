@@ -1,0 +1,292 @@
+---
+title: "Figure 1"
+output: html_document
+---
+
+```{r include=FALSE}
+rm(list=ls())
+
+# 1a Declare root directory, folder locations and load essential stuff
+project.folder <- paste0(print(here::here()),'/')
+source(paste0(project.folder,'0_00_create_folder_structure.R'))
+source(paste0(functions.folder,'script_initiate.R'))
+```
+
+## Loading tropical cyclone prepared datasets and process for all tropical cyclones and hurricanes
+```{r user-input1}
+counties.wind.rolling <- readRDS(paste0(tc.folder,'tc_monthly_county_',start_year,'_',end_year,'.rds'))
+
+counties.wind.all = counties.wind.rolling %>%
+  filter(year%in%years_analysis) %>%
+  group_by(fips) %>%
+  mutate(fips = as.integer(as.character(fips))) %>%
+  tally(count,name='count')
+
+county_months_tc = as.numeric(counties.wind.rolling %>% filter(count>0) %>% distinct(fips,Date) %>% tally())
+county_months_tc_greater_than_1 = as.numeric(counties.wind.rolling %>% filter(count>1) %>% distinct(fips,Date) %>% tally())
+
+print(paste0(length(unique(subset(counties.wind.all,count>0)$fips)),' counties with ', sum(counties.wind.all$count),' exposure days in ',county_months_tc,' months of tropical cyclone exposures'))
+print(paste0('Number of county-months with more than one tropical cyclone exposure is ', county_months_tc_greater_than_1))
+
+counties.wind.not.hurricanes = counties.wind.rolling %>%
+  filter(year%in%years_analysis&category!='hurricane') %>%
+  group_by(fips) %>%
+  mutate(fips = as.integer(as.character(fips))) %>%
+  tally(count,name='count')
+
+county_months_not_hurricanes = as.numeric(counties.wind.rolling %>% filter(count>0,category!='hurricane') %>% distinct(fips,Date) %>% tally())
+
+print(paste0(length(unique(subset(counties.wind.not.hurricanes,count>0)$fips)),' counties with ', sum(counties.wind.not.hurricanes$count),' exposure days in ', county_months_not_hurricanes, ' months of gale to violent storm exposures'))
+
+counties.wind.hurricane = counties.wind.rolling %>%
+  filter(year%in%years_analysis&category=='hurricane') %>%
+  group_by(fips) %>%
+  mutate(fips = as.integer(as.character(fips))) %>%
+  tally(count,name='count')
+
+county_months_hurricanes = as.numeric(counties.wind.rolling %>% filter(count>0,category=='hurricane') %>% distinct(fips,Date) %>% tally())
+
+print(paste0(length(unique(subset(counties.wind.hurricane,count>0)$fips)),' counties with ', sum(counties.wind.hurricane$count),' exposure days in ', county_months_hurricanes,' months of hurricane exposures'))
+```
+
+## Save number of TC days per year for Table
+```{r user-input2}
+counties.wind.all.year = counties.wind.rolling %>%
+  filter(year%in%years_analysis) %>%
+  group_by(year) %>%
+  tally(count,name='count')
+
+write.csv(counties.wind.all.year,
+          paste0(tc.exploration.folder,'tc_exposure_counts_per_year_',start_year,'_',end_year,'.csv'),
+          row.names = F)
+```
+
+## County-months with counts of 3 or more
+```{r user-input3}
+counties.wind.rolling %>% filter(count>=3)
+```
+
+## Important statistics about cyclone frequency etc.
+```{r user-input4}
+tc_range = counties.wind.all %>% filter(count>0) %>% summarise(mean=mean(count), median=median(count), range=range(count))
+print('tropical cyclone exposure statistics')
+print(tc_range)
+tc_months = counties.wind.rolling %>% filter(count>0) %>% group_by(month) %>% tally(count)
+print(tc_months)
+print('maximum tropical cyclone exposure days in single month')
+print(max(counties.wind.rolling$count))
+tc_states = counties.wind.rolling %>% filter(count>0) %>% group_by(state_fips) %>% tally(count) %>% arrange(desc(n))
+print(tc_states)
+tc_counties = counties.wind.rolling %>% filter(count>0) %>% group_by(fips) %>% tally(count) %>% arrange(desc(n))
+print(tc_counties)
+
+not_hurricane_range = counties.wind.not.hurricanes %>% filter(count>0) %>% summarise(mean=mean(count), median=median(count), range=range(count))
+print('hurricane exposure statistics')
+print(not_hurricane_range)
+
+hurricane_range = counties.wind.hurricane %>% filter(count>0) %>% summarise(mean=mean(count), median=median(count), range=range(count))
+print('hurricane exposure statistics')
+print(hurricane_range)
+hurricane_months = counties.wind.rolling %>% filter(count>0,category=='hurricane') %>% group_by(month) %>% tally(count)
+print(hurricane_months)
+print('maximum hurricane exposure days in single month')
+print(max(subset(counties.wind.rolling,category=='hurricane')$count))
+hurricane_states = counties.wind.rolling %>% filter(count>0,category=='hurricane') %>% group_by(state_fips) %>% tally(count) %>% arrange(desc(n))
+print(hurricane_states)
+hurricane_counties = counties.wind.rolling %>% filter(count>0,category=='hurricane') %>% group_by(fips) %>% tally(count) %>% arrange(desc(n))
+print(hurricane_counties)
+```
+
+## Average time between events
+```{r user-input5}
+print('tropical cyclone time between occurrences')
+
+tc_time = counties.wind.rolling %>% 
+  filter(year%in%years_analysis) %>%
+  group_by(fips,Date) %>%
+  mutate(fips = as.integer(as.character(fips))) %>%
+  summarise(count=sum(count)) %>%
+  filter(count>0) %>% 
+  group_by(fips) %>%
+  mutate(time.difference = 12*(Date-lag(Date,default=first(Date)))) %>%
+  add_count(fips) %>%
+  slice(2:n()) %>%
+  filter(n>1)
+
+print(paste0('mean time difference between tropical cyclone occurances is ', round(mean(tc_time$time.difference)),' months'))
+
+# mean time difference between Nov to May
+tc_time_nov_may = counties.wind.rolling %>% 
+  filter(year%in%years_analysis) %>%
+  filter(month%in%c(5,11)) %>%
+  group_by(fips,Date) %>%
+  mutate(fips = as.integer(as.character(fips))) %>%
+  summarise(count=sum(count)) %>%
+  filter(count>0) %>% 
+  group_by(fips) %>%
+  mutate(time.difference = 12*(Date-lag(Date,default=first(Date)))) %>%
+  add_count(fips) %>%
+  slice(2:n()) %>%
+  filter(n>1)
+
+print(paste0('min time difference between tropical cyclone occurances in May and November is ', round(min(tc_time_nov_may$time.difference)),' months'))
+
+
+```
+
+## Number of distinct months per county
+```{r user-input6, include=FALSE}
+counties.month.count = counties.wind.rolling %>%
+  filter(year%in%years_analysis) %>%
+  filter(count==1) %>%
+  group_by(fips) %>%
+  summarise(months=n_distinct(month))
+
+# ggplot(counties.month.count) + 
+#   geom_histogram(aes(x=months),bins=6)
+```
+
+## Prepare map structure
+```{r user-input7, include=FALSE}
+# info for obtaining data on counties to map
+
+# for map theme to plot in ggplot
+theme_map <- function(base_size=10, base_family=""){
+    require(grid)
+    theme_bw(base_size=base_size,base_family=base_family) %+replace%
+    theme(axis.line=element_blank(),
+    axis.text=element_blank(),
+    axis.ticks=element_blank(),
+    axis.title=element_blank(),
+    panel.background=element_blank(),
+    panel.border=element_blank(),
+    panel.grid=element_blank(),
+    panel.margin=unit(0,"lines"),
+    plot.background=element_blank(),
+    # legend.justification = c(0,0),
+    legend.position = 'bottom'
+    )
+}
+
+# load shapefile of entire United States by county
+us.national <- readOGR(dsn=paste0(data.folder,"shapefiles/cb_2015_us_county_500k"),layer="cb_2015_us_county_500k")
+
+# reproject shapefile
+us.national <- spTransform(us.national, CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"))
+
+# only keep US States which are in the analysis
+us.main <- us.national[us.national$STATEFP %in% states_included,]
+
+# fortify to prepare for plotting in ggplot
+map <- fortify(us.main)
+
+# extract data from shapefile
+us.main@data$id <- rownames(us.main@data)
+shapefile.data <- us.main@data
+
+# merge selected data to map_create dataframe for colouring of ggplot
+USA.df <- merge(map, shapefile.data, by='id')
+USA.df$GEOID <- as.integer(as.character(USA.df$GEOID))
+
+# load and process us state shapefile for ggplot
+
+# also load shapefile of entire United States by state
+us <- readOGR(dsn=paste0(data.folder,"shapefiles/states"),layer="states")
+
+# reproject shapefile
+us_aea <- spTransform(us, CRS("+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"))
+us_aea@data$id <- rownames(us_aea@data)
+
+# only keep mainland US States
+us_aea <- us_aea[us_aea$STATE_FIPS %in% states_included,]
+
+us_aea = fortify(us_aea)
+```
+
+## Prepare tropical cyclone map
+```{r user-input8, include=TRUE}
+# merge tropical cyclone exposure data with map file and prepare for plotting in ggplot
+USA.df.merged <- merge(USA.df,counties.wind.all,by.x='GEOID',by.y='fips',all.x=TRUE)
+USA.df.merged[is.na(USA.df.merged)] <- 0
+USA.df.merged <- with(USA.df.merged, USA.df.merged[order(id,order),])
+
+# color palette for map
+colorpalette.all <- c('cornsilk',"blue","darkblue","black")
+```
+
+## Plot tropical cyclone map
+```{r user-input9, include=TRUE}
+# save map plot output
+p = ggplot() +
+    geom_polygon(data=subset(USA.df.merged),aes(x=long,y=lat,group=group,fill=count),color='black',size=0.001) +
+    geom_polygon(data=subset(us_aea),aes(x=long,y=lat,group=group),fill=NA,color='black',size=0.2) +
+    guides(fill = guide_colorbar(direction = "horizontal", title.position="left",barwidth = 10, barheight = 1,title.vjust = 0.8,
+            title = "Counts of\ntropical cyclone exposure"),legend.text=element_text(size=6)) +
+    coord_fixed() +
+    xlab('') +
+    ylab('') +
+    scale_fill_gradientn(c(0,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.7,1),
+    colors=colorpalette.all,breaks=seq(0,30,5), limits = c(0,30),guide = guide_legend(nrow = 1)) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(),#text = element_text(size = 10),
+        axis.text.x = element_text(angle=90), axis.ticks.x=element_blank(),legend.text=element_text(size=6),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"),
+        panel.border = element_rect(colour = "black"),strip.background = element_blank(),legend.justification='center',
+        legend.position = 'bottom', legend.background = element_rect(fill="white", size=.5, linetype="dotted")) +
+    theme_map()
+
+pdf(paste0(tc.exploration.folder,'tropical_cyclone_map_entire_',start_year,'_',end_year,'.pdf'),paper='a4r',height=0,width=0)
+print(p)
+dev.off()
+
+p
+```
+
+## Prepare hurricane map
+```{r user-input10, include=TRUE}
+# merge tropical cyclone exposure data with map file and prepare for plotting in ggplot
+USA.df.merged <- merge(USA.df,counties.wind.hurricane,by.x='GEOID',by.y='fips',all.x=TRUE)
+USA.df.merged[is.na(USA.df.merged)] <- 0
+USA.df.merged <- with(USA.df.merged, USA.df.merged[order(id,order),])
+
+# color palette for map
+colorpalette.hurricane <- c('cornsilk',"red","darkred","black")
+```
+
+## Plot hurricane map
+```{r user-input11, include=TRUE}
+# save map plot output
+q = ggplot() +
+    geom_polygon(data=subset(USA.df.merged),aes(x=long,y=lat,group=group,fill=count),color='black',size=0.001) +
+    geom_polygon(data=subset(us_aea),aes(x=long,y=lat,group=group),fill=NA,color='black',size=0.2) +
+    guides(fill = guide_colorbar(direction = "horizontal", title.position="left",barwidth = 10, barheight = 1,title.vjust = 0.8,
+            title = "Counts of\nhurricane exposure")) +
+    coord_fixed() +
+    xlab('') +
+    ylab('') +
+    scale_fill_gradientn(c(0,0.2,0.25,0.3,0.35,0.4,0.5,0.6,0.65,0.7,1),
+    colors=colorpalette.hurricane,breaks=seq(0,5,1), limits = c(0,5),guide = guide_legend(nrow = 1)) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(),#text = element_text(size = 10),
+        axis.text.x = element_text(angle=90), axis.ticks.x=element_blank(),legend.text=element_text(size=6),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"),
+        panel.border = element_rect(colour = "black"),strip.background = element_blank(),legend.justification='center',
+        legend.position = 'bottom', legend.background = element_rect(fill="white", size=.5, linetype="dotted")) +
+    theme_map()
+
+pdf(paste0(tc.exploration.folder,'hurricane_map_entire_',start_year,'_',end_year,'.pdf'),paper='a4r',height=0,width=0)
+print(q)
+dev.off()
+
+q
+```
+
+## Plot Figure 1
+```{r user-input12, include=TRUE}
+
+pdf(paste0(tc.exploration.folder,'tropical_cyclone_and_hurricane_map_entire_',start_year,'_',end_year,'.pdf'),paper='a4r',height=0,width=0)
+grid.arrange(p,q,nrow=1)
+dev.off()
+
+grid.arrange(p,q,nrow=1)
+```
